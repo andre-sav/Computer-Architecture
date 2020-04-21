@@ -9,6 +9,7 @@ LDI  = 0b10000010 # (R2, 37) two operands / pc += 3 find value 3 by shifting
 PRN = 0b01000111
 MUL  = 0b10100010
 
+
 class CPU:
     """Main CPU class."""
 
@@ -18,6 +19,12 @@ class CPU:
         self.reg = [0] * 8 # fixed performance storage
         self.ram = [0] * 256 # random access memory
         self.pc = 0 # program counter, address of currently executing instruction
+        self.branch_table = {
+                            # HLT: self.hlt,
+                            LDI: self.ldi,
+                            PRN: self.prn,
+                            MUL: self.mul
+                            }
 
 
 
@@ -28,31 +35,33 @@ class CPU:
 
         # For now, we've just hardcoded a program:
 
-        
+        # program = [
+        #     # From print8.ls8
+        #     0b10000010, # LDI R0,8
+        #     0b00000000,
+        #     0b00001000,
+        #     0b01000111, # PRN R0
+        #     0b00000000,
+        #     0b00000001, # HLT
+        # ]
 
-        program = [
-            # From print8.ls8
-            0b10000010, # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111, # PRN R0
-            0b00000000,
-            0b00000001, # HLT
-        ]
+        # for instruction in program:
+        #     self.ram[address] = instruction
+        #     address += 1
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+        program_filename = sys.argv[1]
+        print(program_filename)
+        # sys.exit()
 
-        # with open(program_filename) as f:
-        #     for line in f:
-        #         line = line.split('#')
-        #         line = line[0].strip()
-        #         if line == '':
-        #             continue
-        #         line = int(line, 2)
-        #         self.ram[address] = line
-        #         address += 1
+        with open(program_filename) as f:
+            for line in f:
+                line = line.split('#')
+                line = line[0].strip()
+                if line == '':
+                    continue
+                line = int(line, 2)
+                self.ram[address] = line
+                address += 1
 
 
     def alu(self, op, reg_a, reg_b):
@@ -60,7 +69,8 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        elif op == "MUL":
+            self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -97,11 +107,14 @@ class CPU:
     def ldi(self, operand_a, operand_b):
         self.reg[operand_a] = operand_b
     
-    def prn(self, operand):
-        print(self.reg[operand])
+    def prn(self, operand_a,operand_b):
+        print(self.reg[operand_a])
 
     def hlt(self):
         exit()
+    
+    def mul(self, operand_a, operand_b):
+        self.alu('MUL', operand_a, operand_b)
 
     def run(self):
         """Run the CPU."""
@@ -109,14 +122,22 @@ class CPU:
         while running == True:
             ir = self.ram[self.pc] # instruction register/reserved register 
             inst_len = ((ir & 0b11000000) >> 6) + 1 
-            self.pc += inst_len
             operand_a, operand_b = self.ram_read(self.pc + 1), self.ram_read(self.pc + 2)
-            if ir == HLT:
+            if ir in self.branch_table:
+                self.branch_table[ir](operand_a, operand_b)
+            else:
                 self.hlt()
-            elif ir == LDI: # Set the value of a register to an integer.
-                self.ldi(0, 8)
-            elif ir == PRN:
-                self.prn(0)
+            
+
+            # if ir == HLT:
+            #     self.hlt()
+            # elif ir == LDI: # Set the value of a register to an integer.
+            #     self.ldi(operand_a, operand_b)
+            # elif ir == PRN:
+            #     self.prn(operand_a)
+            # elif ir == MUL:
+            #     self.alu('MUL', operand_a, operand_b)
+            self.pc += inst_len
             
             
             
