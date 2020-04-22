@@ -8,6 +8,8 @@ HLT  = 0b00000001
 LDI  = 0b10000010 # (R2, 37) two operands / pc += 3 find value 3 by shifting
 PRN = 0b01000111
 MUL  = 0b10100010
+PUSH = 0b01000101
+POP = 0b01000110
 
 
 class CPU:
@@ -19,12 +21,16 @@ class CPU:
         self.reg = [0] * 8 # fixed performance storage
         self.ram = [0] * 256 # random access memory
         self.pc = 0 # program counter, address of currently executing instruction
+        # self.sp = self.reg[7] 
         self.branch_table = {
                             # HLT: self.hlt,
                             LDI: self.ldi,
                             PRN: self.prn,
-                            MUL: self.mul
+                            MUL: self.mul,
+                            PUSH: self.push,
+                            POP: self.pop
                             }
+        self.reg[7] = 3 # initialize stack pointer
 
 
 
@@ -115,6 +121,20 @@ class CPU:
     
     def mul(self, operand_a, operand_b):
         self.alu('MUL', operand_a, operand_b)
+    
+    def push(self, operand_a, operand_b):
+        # decrement stack pointer
+        self.reg[7] -= 1 # address at the top of the stack minus 1
+        # copy value from reg into mem at SP
+        reg_number = operand_a
+        value = self.reg[reg_number] # what we are pushing
+        self.ram[self.reg[7]] = value # store the value on the stack
+
+    def pop(self, operand_a, operand_b):
+        # copy value from mem where stack pointer is into register
+        self.reg[operand_a] = self.ram[self.reg[7]]
+        # increment SP
+        self.reg[7] += 1
 
     def run(self):
         """Run the CPU."""
