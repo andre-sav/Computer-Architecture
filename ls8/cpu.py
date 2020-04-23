@@ -10,6 +10,9 @@ PRN = 0b01000111
 MUL  = 0b10100010
 PUSH = 0b01000101
 POP = 0b01000110
+CALL = 0b01010000
+RET = 0b00010001
+ADD = 0b10100000
 
 
 class CPU:
@@ -17,20 +20,23 @@ class CPU:
 
     def __init__(self):
         """Construct a new CPU."""
-        self.instructions = {}
         self.reg = [0] * 8 # fixed performance storage
         self.ram = [0] * 256 # random access memory
         self.pc = 0 # program counter, address of currently executing instruction
-        # self.sp = self.reg[7] 
         self.branch_table = {
-                            # HLT: self.hlt,
+                            HLT: self.hlt,
                             LDI: self.ldi,
                             PRN: self.prn,
                             MUL: self.mul,
                             PUSH: self.push,
-                            POP: self.pop
+                            POP: self.pop,
+                            CALL: self.call,
+                            RET: self.ret,
+                            ADD: self.add
                             }
         self.reg[7] = 3 # initialize stack pointer
+        self.running = True
+        self.set_pc = False # boolean flag for the instruction setting pc
 
 
 
@@ -103,11 +109,10 @@ class CPU:
     # takes Memory Address Register AKA the address we are reading/writing and returns value therein
     def ram_read(self, MAR):
         # return MDR, Memory Data Register, value just read
-        MDR = self.ram[MAR]
-        return MDR
-
+        return self.ram[MAR]
+        
     # takes MAR memory address register and MDR memory data register (value to write)
-    def ram_write(self, MAR, MDR):
+    def ram_write(self, MDR, MAR):
         self.ram[MAR] = MDR
 
     def ldi(self, operand_a, operand_b):
@@ -116,11 +121,15 @@ class CPU:
     def prn(self, operand_a,operand_b):
         print(self.reg[operand_a])
 
-    def hlt(self):
-        exit()
+    def hlt(self, operand_a, operand_b):
+        self.running = False
+        # exit()
     
     def mul(self, operand_a, operand_b):
         self.alu('MUL', operand_a, operand_b)
+
+    def add(self, operand_a, operand_b):
+        self.alu('ADD', operand_a, operand_b)
     
     def push(self, operand_a, operand_b):
         # decrement stack pointer
@@ -136,28 +145,58 @@ class CPU:
         # increment SP
         self.reg[7] += 1
 
+    def call(self, operand_a, operand_b):
+        # Calls a subroutine (function) at the address stored in the register.
+        #  compute pc+2, the return address
+        #  push the return address on the stack
+        #  set the pc to the value in the given register
+        # return_address = self.pc + 2
+
+        # self.reg[7] -= 1 # address at the top of the stack minus 1
+        # # copy value from reg into mem at SP
+        # self.ram[self.reg[7]] = return_address
+        # # set the PC to the value in the given register
+        # reg_num = self.ram_read(self.pc+1)
+        # destination_address = self.reg[reg_num]
+        # self.pc = destination_address
+
+        # def op_call(self, operand_a, operand_b):
+        # self.push_val(self.pc + 2)
+        # self.pc = self.reg[operand_a]
+        # print('initializing call')
+
+        self.reg[7] -= 1
+        self.ram_write(self.pc + 2, self.reg[7]) 
+        self.pc = self.reg[operand_a]
+
+
+
+    def ret(self, operand_a, operand_b):
+        # Pop the value from the top of the stack and store it in the `PC`.
+        # return_address = self.ram[self.reg[7]]
+        # self.reg[7] += 1
+        # self.pc = return_address
+
+        value = self.ram_read(self.reg[7])
+        self.reg[7] += 1
+        self.pc = value
+
+
     def run(self):
         """Run the CPU."""
-        running = True
-        while running == True:
+        # iteration = 0
+        while self.running == True: 
             ir = self.ram[self.pc] # instruction register/reserved register 
             inst_len = ((ir & 0b11000000) >> 6) + 1 
+
             operand_a, operand_b = self.ram_read(self.pc + 1), self.ram_read(self.pc + 2)
             if ir in self.branch_table:
                 self.branch_table[ir](operand_a, operand_b)
-            else:
-                self.hlt()
-            
-
-            # if ir == HLT:
-            #     self.hlt()
-            # elif ir == LDI: # Set the value of a register to an integer.
-            #     self.ldi(operand_a, operand_b)
-            # elif ir == PRN:
-            #     self.prn(operand_a)
-            # elif ir == MUL:
-            #     self.alu('MUL', operand_a, operand_b)
-            self.pc += inst_len
+    
+            if ir is not CALL and ir is not RET:
+                self.pc += inst_len
+            # iteration += 1
+            # print(iteration)
             
             
             
