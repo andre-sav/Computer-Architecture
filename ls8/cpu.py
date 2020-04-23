@@ -147,14 +147,14 @@ class CPU:
 
     def call(self, operand_a, operand_b):
         # Calls a subroutine (function) at the address stored in the register.
-        #  compute pc+2, the return address
-        #  push the return address on the stack
-        #  set the pc to the value in the given register
-        # return_address = self.pc + 2
+        # compute pc+2, the return address
+        # push the return address on the stack
+        # set the pc to the value in the given register
+        # return_address = self.pc + 2 # this is operand_b
 
-        # self.reg[7] -= 1 # address at the top of the stack minus 1
+        # self.reg[7] -= 1 # decrement stack pointer
         # # copy value from reg into mem at SP
-        # self.ram[self.reg[7]] = return_address
+        # self.ram[self.reg[7]] = operand_b
         # # set the PC to the value in the given register
         # reg_num = self.ram_read(self.pc+1)
         # destination_address = self.reg[reg_num]
@@ -165,11 +165,14 @@ class CPU:
         # self.pc = self.reg[operand_a]
         # print('initializing call')
 
+        # simplified version of above
         self.reg[7] -= 1
         self.ram_write(self.pc + 2, self.reg[7]) 
         self.pc = self.reg[operand_a]
 
-
+    # takes MAR memory address register and MDR memory data register (value to write)
+    def ram_write(self, MDR, MAR):
+        self.ram[MAR] = MDR
 
     def ret(self, operand_a, operand_b):
         # Pop the value from the top of the stack and store it in the `PC`.
@@ -177,9 +180,9 @@ class CPU:
         # self.reg[7] += 1
         # self.pc = return_address
 
-        value = self.ram_read(self.reg[7])
+        return_address = self.ram_read(self.reg[7])
         self.reg[7] += 1
-        self.pc = value
+        self.pc = return_address
 
 
     def run(self):
